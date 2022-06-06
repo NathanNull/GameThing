@@ -1,6 +1,6 @@
 import pygame
 import world
-from block import Block, all_blocks
+import block
 from player import Player
 from pygame.locals import FULLSCREEN, DOUBLEBUF
 from config import SCR_SIZE
@@ -22,11 +22,7 @@ ms = []
 GREEN = (102, 255, 102)
 text = pygame.font.SysFont('arial', 20)
 
-size = 15
-h_size = size//2
-for x in range(-size, SCREEN_WIDTH+size, size):
-    for y in range(SCREEN_HEIGHT//2, SCREEN_HEIGHT+size, size):
-        Block(x+h_size, y, size*0.9)
+block.generate(45)
 
 jesus = Player(100,100,2)
 player_group = world.WorldGroup()
@@ -45,7 +41,6 @@ while run:
       print('You pressed a button! Good job')
       if event.key == pygame.K_a:
         print("You pressed A! I'm so proud")
-        jesus.move(True,False)
         
     keys = pygame.key.get_pressed()
     if keys[pygame.K_j]:
@@ -67,14 +62,16 @@ while run:
   rects.extend(player_group.update())
   player_group.draw(screen)
 
-  rects.extend(all_blocks.update())
-  all_blocks.draw(screen)
+  rects.extend(block.all_blocks.update())
+  block.all_blocks.draw(screen)
+
+  pygame.draw.rect(screen,GREEN,((SCREEN_WIDTH,SCREEN_HEIGHT),(0,0)))
 
   dt = clock.tick(30)
   ms.append(dt)
   if sum(ms)>1000:
     fps = [1/(t/1000) for t in ms]
-    print(round(sum(fps)/len(fps), 2))
+    #print(round(sum(fps)/len(fps), 2))
     ms = []
 
   if is_first:
@@ -82,6 +79,5 @@ while run:
     is_first = False
   else:
     pygame.display.update(rects)
-
 
 pygame.quit()

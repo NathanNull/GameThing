@@ -1,5 +1,5 @@
 import pygame
-from utils import add
+from utils import add, mul, lerp, get_collision_sides
 from config import SCR_SIZE
 
 screen_world_pos = (0,0)
@@ -18,7 +18,10 @@ class WorldGroup(pygame.sprite.Group):
             if not spr.screen_rect.colliderect(screen_rect):
                 continue
             #before: self.spritedict[spr] = surface_blit(spr.image, spr.rect)
-            self.spritedict[spr] = surface_blit(spr.image, spr.screen_rect)
+            if hasattr(spr, "draw"):
+                spr.draw(surface)
+            else:
+                self.spritedict[spr] = surface_blit(spr.image, spr.screen_rect)
             
         self.lostsprites = []
 
@@ -43,6 +46,8 @@ class WorldObject(pygame.sprite.Sprite):
         pygame.sprite.Sprite.__init__(self)
         
         self.x, self.y = x, y
+
+        self.collides = collides
         
         self.image = img
         self.rect = self.image.get_rect()
@@ -77,26 +82,67 @@ class WorldObject(pygame.sprite.Sprite):
     #     pass
 
 class PhysicsObject(WorldObject):
-    def __init__(self, x, y, img, collides=True,\
-                 grav=1, friction={"air":0.9, "ground":0.8}):
+    def __init__(self, x, y, img, collide_groups=[], collides=True,\
+                 grav=1, friction={False:0.9, True:0.8}):
         WorldObject.__init__(self, x, y, img, collides)
         self.vel = (0,0)
         self.acc = (0,0)
+        self.collide_groups = collide_groups
+        self.collides = collides
         self.grav = grav
+        self.friction = friction
+        self.grounded = False
         
     def update(self):
-        self.acc = add(self.acc, (0, self.grav))
+        if self.grounded:
+            all_sprites = []
+            for group in self.collide_groups:
+                all_sprites.extend(group.sprites())
+            self.grounded = pygame.Rect(self.rect.bottomleft,(self.rect.width,1)).collidelist(all_sprites) != -1
+            print(self.grounded)
+        else:
+            self.acc = add(self.acc, (0, self.grav))
         
-        self.vel = add(self.vel, self.acc)
+        self.vel = mul(add(self.vel, self.acc),self.friction[self.grounded])
+        self.vel = tuple([round(v, 1) for v in self.vel])
+        print(self.vel)
 
         self.acc = (0,0)
 
-        self.try_move(self.vel)
+        self.try_move(self.vel, self.collide_groups)
 
         return super().update()
 
-    def try_move(self, amount):
-        self.rect.center = add(self.rect.center, amount)
+    def try_move(self, shift, test_groups):
+        target_pos = add(self.rect.topleft, shift)
+        iterations = max([int(abs(v)) for v in shift])
+        
+        last_allowed_pos = self.rect.topleft
+        for i in range(iterations):
+            amount = (i+1)/iterations
+            pos = [lerp(a, b, amount) for (a,b) in zip(self.rect.topleft, target_pos)]
+            test_rect = pygame.Rect(pos, (self.rect.size))
+            passed = True
+            for group in test_groups:
+                for spr in group.sprites():
+                    if hasattr(spr,"collides") and spr.collides\
+                    and test_rect.colliderect(spr.rect):
+                        sides = get_collision_sides(test_rect, pygame.Rect(last_allowed_pos,self.rect.size), spr.rect)
+                        print(sides)
+                        for side in sides:
+                            if side in ["left","right"]:
+                                self.vel = (0,self.vel[1])
+                            elif side in ["top","bottom"]:
+                                self.vel = (self.vel[0],0)
+                            if side == "bottom":
+                                self.grounded = True
+                        
+                        passed = False
+            if not passed:
+                break
+            last_allowed_pos = test_rect.topleft
+
+        self.rect.topleft = last_allowed_pos
 
     def push(self, amount):
         self.acc = add(self.acc, amount)
