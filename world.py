@@ -83,7 +83,7 @@ class WorldObject(pygame.sprite.Sprite):
 
 class PhysicsObject(WorldObject):
     def __init__(self, x, y, img, collide_groups=[], collides=True,\
-                 grav=1, friction={False:0.9, True:0.8}):
+                 grav=1.75, friction={False:0.9, True:0.8}):
         WorldObject.__init__(self, x, y, img, collides)
         self.vel = (0,0)
         self.acc = (0,0)
@@ -99,13 +99,11 @@ class PhysicsObject(WorldObject):
             for group in self.collide_groups:
                 all_sprites.extend(group.sprites())
             self.grounded = pygame.Rect(self.rect.bottomleft,(self.rect.width,1)).collidelist(all_sprites) != -1
-            print(self.grounded)
         else:
             self.acc = add(self.acc, (0, self.grav))
         
         self.vel = mul(add(self.vel, self.acc),self.friction[self.grounded])
         self.vel = tuple([round(v, 1) for v in self.vel])
-        print(self.vel)
 
         self.acc = (0,0)
 
@@ -128,7 +126,6 @@ class PhysicsObject(WorldObject):
                     if hasattr(spr,"collides") and spr.collides\
                     and test_rect.colliderect(spr.rect):
                         sides = get_collision_sides(test_rect, pygame.Rect(last_allowed_pos,self.rect.size), spr.rect)
-                        print(sides)
                         for side in sides:
                             if side in ["left","right"]:
                                 self.vel = (0,self.vel[1])

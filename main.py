@@ -1,12 +1,16 @@
 import pygame
 import world
-import block
 from player import Player
+from block import Block, BlockGroup
 from pygame.locals import FULLSCREEN, DOUBLEBUF
+import gamestates
 from config import SCR_SIZE
 #for JamisonM: useless = True
 
+#WARNING: doesn't work atm (at least I think so)
+
 # many changes have happened
+gamestates.run = True
 
 SCREEN_WIDTH, SCREEN_HEIGHT = SCR_SIZE
 
@@ -22,25 +26,21 @@ ms = []
 GREEN = (102, 255, 102)
 text = pygame.font.SysFont('arial', 20)
 
-block.generate(45)
+BlockGroup.generate(45)
 
-jesus = Player(100,100,2)
+
 player_group = world.WorldGroup()
+jesus = Player(100,100,2)
 player_group.add(jesus)
 jesus.push((10,0))
 
-run = True
 is_first = True
-while run:
+while gamestates.run:
+  pygame.draw.rect(screen,GREEN,((0,0),(SCREEN_WIDTH,SCREEN_HEIGHT)))
   for event in pygame.event.get():
   #quit game
     if event.type == pygame.QUIT:
-      run = False
-
-    if event.type == pygame.KEYDOWN:
-      print('You pressed a button! Good job')
-      if event.key == pygame.K_a:
-        print("You pressed A! I'm so proud")
+      gamestates.run = False
         
     keys = pygame.key.get_pressed()
     if keys[pygame.K_j]:
@@ -53,9 +53,12 @@ while run:
         world.move((0,1))
 
 
-  pygame.draw.rect(screen,GREEN,((0,0),(SCREEN_WIDTH,SCREEN_HEIGHT)))
+  
   r = screen.blit(text.render(str(world.screen_world_pos), True, (0,0,0)), (0,0))
-  r = pygame.Rect(r.topleft, (100, r.height))
+  r = pygame.Rect(r.topleft, (200, r.height))
+
+  r = screen.blit(text.render(str(jesus.blocks), True, (0,0,0)), (SCREEN_WIDTH,0))
+  r = pygame.Rect(r.topleft, (200, r.height))
 
   rects = [r]
 
